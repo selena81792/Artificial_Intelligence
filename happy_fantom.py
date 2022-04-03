@@ -131,7 +131,45 @@ def possible_new_blocks(blocked, blue_pos):
             new_blocked.append([i, dest])
     return new_blocked
 
-def new_move(game_state, predictions, solutions, color, power_action):
+def find_best_move(tree, depth):
+    good_choices = []
+    max_score = 0
+    for branch in tree:
+        if branch[depth]["score"] > max_score:
+            max_score = branch[depth]["score"]
+    for branch in tree:
+        if branch[depth]["score"] == max_score:
+            good_choices.append(branch)
+    return good_choices
+
+def do_turn_characters(game_state, tree, solutions):
+    move_character_functions = {
+        "red": move_red,
+        "pink": move_pink,
+        "blue": move_blue,
+        "grey": move_grey,
+        "black": move_black,
+        "white": move_white,
+        "purple": move_purple,
+        "brown": move_brown,
+    }
+    for character in game_state["active character_cards"]:
+        move_character_functions[character["color"]](game_state, character, tree, solutions)
+
+def do_turn(game_state, my_answer):
+    answer = []
+    do_turn_characters(game_state, answer, [])
+    depth = len(answer[0])
+    while depth > 0:
+        depth -= 1
+        answer = find_best_move(answer, depth)
+    my_answer["color"] = answer[0][0]["data"]["color"]
+    my_answer["position"] = answer[0][0]["data"]["position"]
+    my_answer["power"] = answer[0][0]["data"]["power"]
+    my_answer["power_action"] = answer[0][0]["data"]["power_action"]
+    return my_answer
+
+def new_move(game_state, tree, solutions, color, power_action):
     depth = len(game_state["active character_cards"])
     info = find_character(game_state, color)
     data = {
@@ -144,11 +182,11 @@ def new_move(game_state, predictions, solutions, color, power_action):
     solution = copy.deepcopy(solutions)
     solution.append({"depth": depth, "data": data, "score": get_score(game_state)})
     if depth == 2:
-        predict_turn(game_state, predictions, solution)
+        do_turn_characters(game_state, tree, solution)
     else:
-        predictions.append(solution)
+        tree.append(solution)
 
-def move_character(game_state, character, predictions, solutions, power):
+def move_character(game_state, character, tree, solutions, power):
     color = character["color"]
     position = character["position"]
     distance = len(find_character_pos(game_state, position))     # character can move no. X of steps from room with X people inside
@@ -156,12 +194,15 @@ def move_character(game_state, character, predictions, solutions, power):
         t_game_state = copy.deepcopy(game_state)
         t_game_state = update_character(t_game_state, color, pos, power)
         t_game_state = remove_character(t_game_state, color)
-        new_move(t_game_state, predictions, solutions, color, 0)
+        new_move(t_game_state, tree, solutions, color, 0)
 
-def move_pink(game_state, character, predictions, solutions):
-    move_character(game_state, character, predictions, solutions, False)
+def move_red(game_state, character, tree, solutions):    # Raoul De Chagny can draw a card
+    move_character(game_state, character, tree, solutions, True)
 
-def move_blue(game_state, character, predictions, solutions):
+def move_pink(game_state, character, tree, solutions):   # Meg Giry can use secret passages
+    move_character(game_state, character, tree, solutions, False)
+
+def move_blue(game_state, character, tree, solutions):   # Madame Giry can change block
     color = character["color"]
     position = character["position"]
     distance = len(find_character_pos(game_state, position))    # character can move no. X of steps from room with X people inside
@@ -172,160 +213,60 @@ def move_blue(game_state, character, predictions, solutions):
         for passage in possible_new_blocks(t_game_state_2["blocked"], pos):
             t_game_state = copy.deepcopy(t_game_state_2)
             t_game_state["blocked"] = passage
-            new_move(t_game_state, predictions, solutions, color, passage)
+            new_move(t_game_state, tree, solutions, color, passage)
 
-def move_purple(game_state, character, predictions, solutions):
+def move_grey(game_state, character, tree, solutions):   # Joseph Buquet can move shadow room
     color = character["color"]
-    move_character(game_state, character, predictions, solutions, False)
-    for target in game_state["characters"]:
-        tmp_pos = target["position"]
-        if target["color"] == color or tmp_pos == character["position"]:
-            continue
-        t_game_state = copy.deepcopy(game_state)
-        t_game_state = update_character(t_game_state, target["color"], character["position"], target["power"])
-        t_game_state = update_character(t_game_state, color, tmp_pos, True)
-        t_game_state = remove_character(t_game_state, color)
-        new_move(t_game_state, predictions, solutions, color, target["color"])
-
-def move_grey(game_state, character, predictions, solutions):
-    color = character["color"]
-    initial_pos = character["position"]
-    distance = len(find_character_pos(game_state, initial_pos))
-
-    for pos in new_positions(game_state, color, initial_pos, distance):
+    position = character["position"]
+    distance = len(find_character_pos(game_state, position))
+    for pos in new_positions(game_state, color, position, distance):
         t_game_state_2 = copy.deepcopy(game_state)
         t_game_state_2 = update_character(t_game_state_2, color, pos, True)
         t_game_state_2 = remove_character(t_game_state_2, color)
-        for shadow_pos in range(10):
+        for shadow_pos in range(10):        # iterate through all possible new shadow room
             if shadow_pos == t_game_state_2["shadow"]:
                 continue
             t_game_state = copy.deepcopy(t_game_state_2)
             t_game_state["shadow"] = shadow_pos
-            new_move(t_game_state, predictions, solutions, color, t_game_state["shadow"])
+            new_move(t_game_state, tree, solutions, color, t_game_state["shadow"])
 
-def white_power(game_state, predictions, solutions, color, pos):
-    valid_passages = []
-    blocked = game_state["blocked"]
-
-    for passage in passages[pos]:
-        if (passage == blocked[0] and blocked[1] == pos) or (passage == blocked[1] and blocked[0] == pos):
-            continue
-        valid_passages.append(passage)
-
-    for passage in valid_passages:
-        power_action = []
-        t_game_state = copy.deepcopy(game_state)
-        for character in find_character_pos(game_state, pos):
-            if character["color"] == color:
-                continue
-            t_game_state = update_character(t_game_state, character["color"], passage, character["power"])
-            power_action.append([character["color"], passage])
-        new_move(t_game_state, predictions, solutions, color, power_action)
-
-def move_white(game_state, character, predictions, solutions):
-    color = character["color"]
-    initial_pos = character["position"]
-    distance = len(find_character_pos(game_state, initial_pos))
-    for pos in new_positions(game_state, color, initial_pos, distance):
-        t_game_state = copy.deepcopy(game_state)
-        t_game_state = remove_character(t_game_state, color)
-        t_game_state = update_character(t_game_state, color, pos, False)
-        if character_alone(t_game_state, color):
-            new_move(t_game_state, predictions, solutions, color, 0)
-            continue
-        t_game_state = update_character(t_game_state, color, pos, True)
-        white_power(t_game_state, predictions, solutions, color, pos)
-
-def black_power_attracting_neighbours(game_state, pos):
-    blocked = game_state["blocked"]
+def move_black_power(t_game_state, pos):
+    blocked = t_game_state["blocked"]
     for neighbour in passages[pos]:
         if (neighbour == blocked[0] and pos == blocked[1]) or (neighbour == blocked[1] and pos == blocked[0]):
             continue
-        for character in find_character_pos(game_state, neighbour):
-            game_state = update_character(game_state, character["color"], pos, character["power"])
-    return game_state
+        for character in find_character_pos(t_game_state, neighbour):
+            t_game_state = update_character(t_game_state, character["color"], pos, character["power"])
+    return t_game_state
 
-def move_black(game_state, character, predictions, solutions):
+def move_black(game_state, character, tree, solutions):  # Christine Daae can attract others
     color = character["color"]
-    initial_pos = character["position"]
-    distance = len(find_character_pos(game_state, initial_pos))
-    for pos in new_positions(game_state, color, initial_pos, distance):
+    position = character["position"]
+    distance = len(find_character_pos(game_state, position))
+    for pos in new_positions(game_state, color, position, distance):
         for power in range(2):
             t_game_state = copy.deepcopy(game_state)
             if power == 0:
                 t_game_state = update_character(t_game_state, color, pos, False)
             else:
                 t_game_state = update_character(t_game_state, color, pos, True)
-                t_game_state = black_power_attracting_neighbours(t_game_state, pos)
+                t_game_state = move_black_power(t_game_state, pos)
             t_game_state = remove_character(t_game_state, color)
-            new_move(t_game_state, predictions, solutions, color, 0)
+            new_move(t_game_state, tree, solutions, color, 0)
 
-def move_red(game_state, character, predictions, solutions):
-    move_character(game_state, character, predictions, solutions, True)
+def move_white(game_state, character, tree, solutions):  # M. Moncharmin can force others to leave
+    move_character(game_state, character, tree, solutions, False)
 
-def move_brown(game_state, character, predictions, solutions):
-    color = character["color"]
-    initial_pos = character["position"]
-    distance = len(find_character_pos(game_state, initial_pos))
-    for pos in new_positions(game_state, color, initial_pos, distance):
-        t_game_state = copy.deepcopy(game_state)
-        t_game_state = update_character(t_game_state, color, pos, False)
-        t_game_state = remove_character(t_game_state, color)
-        new_move(t_game_state, predictions, solutions, color, 0)
-    if not character_alone(game_state, color):
-        for target in find_character_pos(game_state, initial_pos):
-            if target["color"] == color:
-                continue
-            for pos in new_positions(game_state, color, initial_pos, distance):
-                t_game_state = copy.deepcopy(game_state)
-                t_game_state = update_character(t_game_state, color, pos, True)
-                t_game_state = update_character(t_game_state, target["color"], pos, target["power"])
-                t_game_state = remove_character(t_game_state, color)
-                new_move(t_game_state, predictions, solutions, color, target["color"])
+def move_purple(game_state, character, tree, solutions):     # M. Richard can swap position with other character
+    move_character(game_state, character, tree, solutions, False)
 
-def predict_turn(game_state, predictions, solutions):
-    character_turn = {
-        "pink": move_pink,
-        "blue": move_blue,
-        "purple": move_purple,
-        "grey": move_grey,
-        "white": move_white,
-        "black": move_black,
-        "red": move_red,
-        "brown": move_brown,
-    }
-    for character in game_state["active character_cards"]:
-        character_turn[character["color"]](game_state, character, predictions, solutions)
+def move_brown(game_state, character, tree, solutions):  # The Persian can take a character with him to move
+    move_character(game_state, character, tree, solutions, False)
 
-def find_max_and_reduce_predictions(predictions, depth):
-    new_pred = []
-    max_score = 0
-    for pred in predictions:
-        if pred[depth]["score"] > max_score:
-            max_score = pred[depth]["score"]
-    for pred in predictions:
-        if pred[depth]["score"] == max_score:
-            new_pred.append(pred)
-    return new_pred
-
-def play_turn(game_state, my_answer):
-    predictions = []
-    predict_turn(game_state, predictions, [])
-    depth = len(predictions[0])
-    while depth > 0:
-        depth -= 1
-        predictions = find_max_and_reduce_predictions(predictions, depth)
-    index = random.randint(0, len(predictions) - 1)
-    my_answer["color"] = predictions[index][0]["data"]["color"]
-    my_answer["position"] = predictions[index][0]["data"]["position"]
-    my_answer["power"] = predictions[index][0]["data"]["power"]
-    my_answer["power_action"] = predictions[index][0]["data"]["power_action"]
-    return my_answer
-
-def get_answer(question, data, game_state, my_answer):
+def respond(question, data, game_state, my_answer):
     response_index = 0
     if question["question type"] == "select character":
-        my_answer = play_turn(game_state, my_answer)
+        my_answer = do_turn(game_state, my_answer)
         for character in data:
             if character["color"] == my_answer["color"]:
                 response_index = data.index(character)
@@ -333,22 +274,17 @@ def get_answer(question, data, game_state, my_answer):
     elif question["question type"] == "select position":
         response_index = data.index(my_answer["position"])
     elif question["question type"] == "activate " + my_answer["color"] + " power":
-        response_index = 1 if my_answer["power"] else 0
+        if my_answer["power"]:
+            response_index = 1
+        else:
+            response_index = 0
     elif question["question type"] == "blue character power room":
         response_index = data.index(my_answer["power_action"][0])
     elif question["question type"] == "blue character power exit":
         response_index = data.index(my_answer["power_action"][1])
-    elif question["question type"].startswith("white character power move "):
-        color = question["question type"].replace("white character power move ", "")
-        for power_action in my_answer["power_action"]:
-            if power_action[0] == color:
-                response_index = data.index(power_action[1])
-                break
     else:
         response_index = data.index(my_answer["power_action"])
-
     return response_index
-
 
 class Player():
 
@@ -368,7 +304,7 @@ class Player():
         # work
         data = question["data"]
         game_state = question["game state"]
-        response_index = get_answer(question, data, game_state, my_answer)
+        response_index = respond(question, data, game_state, my_answer)
         # log
         fantom_logger.debug("|\n|")
         fantom_logger.debug("fantom answers")
