@@ -2,16 +2,31 @@
 
 ## Description of the game
 
-You can find the rules of the game in ./le-fantom-de-l-opera_rules_fr.pdf
+You can find the rules of the game [Here](https://github.com/nlehir/phantom_opera/blob/master/le-fantome-de-l-opera_rules_fr.pdf)
+
+## 🚀 Structure of the projet
+
+In the project you'll find the following structure:
+
+```
+/
+├── .gitignore
+├── README.md 
+└── The phantom of the Opera.pdf
+└── happy_fantom.py
+└── happy_inspector.py
+```
 
 ## To launch a game
 
-1) python3.6 server.py
+| Command         | Action                                              |
+|:----------------|:--------------------------------------------        |
+| `python3.6 server.py`   | Runs the Server                             |
+| `python3.6 happy_inspector.py` | Runs the inspector                   |
+| `python3.6 happy_fantom.py` | Runs the fantom                         |
 
-2) python3.6 inspector.py
-
-3) python3.6 random.fantom.py
-
+You need to follow this order. 
+You can us three tabs of your favorite terminal.
 You can also use a more recent version of python.
 
 ## Additional information 
@@ -23,12 +38,3 @@ You can set the level of importance of the logging messages :
 ## Difference between game and server
 Brown character : takes the moved character to his final position, instead of
 any position on the path taken by the brown character.
-
-## Todo
-
-Edit protocol and server so that the players could connect in whatever order.
-
-## Timeout
-
-There is now a timeout of 10 seconds to answer the questions asked by the
-server.
