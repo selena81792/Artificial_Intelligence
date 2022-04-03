@@ -94,9 +94,8 @@ class Player():
         game_state = question["game state"]
         
         # analyze the question and the game state to give the right answer
-
-        
         response_index = self.analyze_question(question, data, game_state)
+
         # log
         inspector_logger.debug("|\n|")
         inspector_logger.debug("inspector answers")
@@ -106,8 +105,6 @@ class Player():
         inspector_logger.debug(f"response index ---- {response_index}")
         inspector_logger.debug(f"response ---------- {data[response_index]}")
         return response_index
-
-
 
     def how_many_suspect_change_state(self, state, data):
         if (state == StateDirection.SEPARATE):
@@ -119,8 +116,7 @@ class Player():
         else:
             return self.chooseCharacter_stay(data)
             
-
-    # décider dans quel direction notre IA va aller: séparer les suspect des groupe, regrouper les suspect, ou garder le nombre de suspect seul et en groupe tel quelle
+    # decide in which direction our AI will go : either separate suspect from groups, regroup suspects, or keep same state (suspects in group and alone at the same position)
     def do_we_separate(self, game_state):
         listPlayer.clear()
         listPlayerSuspect.clear()
@@ -128,7 +124,7 @@ class Player():
             listPlayer.append(PlayerPos(d['color'], d['position'], d['suspect']))
         index = 0
         for player in listPlayer:
-            #check si le character est seul ou pas
+            # check if the character is alone or not
             if (([character.position for character in listPlayer].count(player.position) == 1) or game_state["shadow"] == player.position):
                 if (player.suspect):
                     self.number_alone += 1
@@ -145,8 +141,7 @@ class Player():
         else:
             return StateDirection.STAY
 
-
-    # on choisis notre couleur en fonction de la du state de notre IA (separate, regroup, stay)
+    # we choose our color depending og the state for our AI (separate, regroup, stay)
     def chooseCharacter_separate(self, data: list):
         index = 0
         if any(d['color'] == 'white' for d in data):
@@ -193,7 +188,6 @@ class Player():
                 for player in listPlayer:
                     if (player.color != "brown" and player.position == pos and player.suspect == False):
                         return index
-
         if any(d['color'] == 'pink' for d in data):
             index = next((index for (index, d) in enumerate(data) if d["color"] == "pink"), None)
             return index
@@ -220,16 +214,12 @@ class Player():
         if any(d['color'] == 'grey' for d in data):
             index = next((index for (index, d) in enumerate(data) if d["color"] == "grey"), None)
             return index
-            
         if any(d['color'] == 'brown' for d in data):
             index = next((index for (index, d) in enumerate(data) if d["color"] == "brown"), None)
             return index
         if any(d['color'] == 'black' for d in data):
             index = next((index for (index, d) in enumerate(data) if d["color"] == "black"), None)
             return index
-
-
-
 
     def select_character(self, question, data: list, game_state):
         if (len(data) == 1):
@@ -257,7 +247,7 @@ class Player():
                 room = pos
         return room
 
-    # on choisis notre position en fonction du state de notre IA (separate, regroup, stay)
+    # we choose our position depending on the state of the AI (separate, regroup, or stay)
     def choosePosition_separate(self, data):
         goToPos = -1
         character = next((x for x in listPlayer if x.color == self.selected_color), None)
@@ -281,10 +271,6 @@ class Player():
         else:
             self.selected_character.isAlone = False
         return data.index(goToPos)
-
-
-
-
         
     def choosePosition_regroup(self, data):
         goToPos = -1
@@ -331,9 +317,6 @@ class Player():
             self.selected_character.isAlone = False
         return data.index(goToPos)
 
-
-        
-
     def select_Position(self, data):
         if (self.state == StateDirection.SEPARATE):
             return self.choosePosition_separate(data)
@@ -341,8 +324,8 @@ class Player():
             return self.choosePosition_regroup(data)
         else:
             return self.choosePosition_stay(data)
-            
-    # on decortique la question
+
+    # we split and analyze every part of the question asked
     def analyze_question(self, question, data, game_state):
         arrayQuestionsType = question['question type'].split()
         index = random.randint(0, len(data)-1)
@@ -359,7 +342,7 @@ class Player():
 
     # Ensure if I want to activate power or not
     def color_activate(self, color):
-        # these are not mandatory
+        # these colors are not mandatory
         if (color == Color.PURPLE.value):
             if (self.state == StateDirection.SEPARATE):
                 if ((self.selected_character.isAlone and self.selected_character.suspect) or self.selected_character.suspect == False and self.selected_character.isAlone == False):
@@ -389,11 +372,11 @@ class Player():
             else:
                 return 0
 
-    #décider avec qui purple va échanger sa place
+    # decide with who purple will exchange his place
     def manage_purple_power(self, data):
         if (self.state == StateDirection.SEPARATE):
             if (self.selected_character.suspect):
-                #on cherche un innocent seul
+                # we look for an alone innocent
                 for color in data:
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.isAlone and character.suspect == False):
@@ -401,7 +384,7 @@ class Player():
                 character = next((x for x in listPlayer if x.suspect == False))
                 return data.index(character.color)
             else:
-                #on cherche un suspect en groupe
+                # we look for a suspect alone
                 for color in data:
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.isAlone == False and character.suspect):
@@ -410,7 +393,7 @@ class Player():
                 return data.index(character.color)
         elif (self.state == StateDirection.REGROUP):
             if (self.selected_character.suspect):
-                #on cherche un innocent en groupe
+                # we look for an innocent in group
                 for color in data:
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.isAlone == False and character.suspect == False):
@@ -418,7 +401,7 @@ class Player():
                 character = next((x for x in listPlayer if x.isAlone == True))
                 return data.index(character.color)
             else:
-                #on cherche un suspect seul
+                # we look for a suspect alone
                 for color in data:
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.isAlone == True and character.suspect):
@@ -427,7 +410,7 @@ class Player():
                 return data.index(character.color)
 
     # To get details for asked power
-    #décider comment les pouvoir vont être utilisé
+    # and decide how power will be used 
     def ask_for_color_power(self, arrayQuestionsType, color, data, game_state):
         if (color == Color.PURPLE.value):
             return self.manage_purple_power(data)
@@ -438,7 +421,7 @@ class Player():
                 pass
         elif (color == Color.BROWN.value):
             if (self.state == StateDirection.SEPARATE):
-                #on cherche un innocent
+                # wee look for an innoncent
                 for color in data:
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.suspect == False):
@@ -450,7 +433,7 @@ class Player():
         elif (color == Color.GREY.value):
             if (self.state == StateDirection.SEPARATE):
                 for pos in data:
-                    #on cherche un suspect en groupe
+                    # we look for a suspect alone
                     character = next((x for x in listPlayer if x.position == pos), None)
                     if (character.isAlone == False and character.suspect):
                         return data.index(pos)
@@ -458,7 +441,7 @@ class Player():
                 return data.index(character.position)
             else:
                 for pos in data:
-                    #on cherche un suspect en seul
+                    # we look for a suspect alone
                     character = next((x for x in listPlayer if x.position == pos), None)
                     if (character != None and character.isAlone == True and character.suspect):
                         return data.index(pos)
@@ -469,7 +452,7 @@ class Player():
             return self.define_white_power_data(arrayQuestionsType[4], data)
         return random.randint(0, len(data)-1)
 
-    #la couleur white déplace les joueur dans les salles adjacentes en fonction du state
+    # the white power moves players in adjacent rooms depending on the state
     def define_white_power_data(self, character, data):
         self.selected_color = character
         if (self.state == StateDirection.SEPARATE):
@@ -478,7 +461,6 @@ class Player():
             return self.choosePosition_regroup(data)
         else:
             return self.choosePosition_stay(data)
-
 
     def handle_json(self, data):
         data = json.loads(data)
@@ -498,7 +480,6 @@ class Player():
             else:
                 print("no message, finished learning")
                 self.end = True
-
 
 p = Player()
 
