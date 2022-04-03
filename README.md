@@ -1,4 +1,4 @@
-# Server for the Intro to AI module
+# Inspector and Fantom AI for the Fantom Of Opera AI module
 
 ## Description of the game
 
