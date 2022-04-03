@@ -18,6 +18,19 @@ __pycache__/*
 
 .idea/*
 
+# Useless files for delivery
+changelog.txt
+le-fantome-de-l-opera_rules_fr.pdf
+project_description.pdf
+logs/
+src/
+project_description.pdf
+protocol.py
+random_fantom.py
+random_inspector.py
+server.py
+add_to_gitignore
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
