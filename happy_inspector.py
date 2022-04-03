@@ -373,7 +373,7 @@ class Player():
                 return 0
 
     # decide with who purple will exchange his place
-    def manage_purple_power(self, data):
+    def manage_purple_power(self, data, color):
         if (self.state == StateDirection.SEPARATE):
             if (self.selected_character.suspect):
                 # we look for an alone innocent
@@ -406,14 +406,14 @@ class Player():
                     character = next((x for x in listPlayer if x.color == color), None)
                     if (character.isAlone == True and character.suspect):
                         return data.index(color)
-                character = next((x for x in listPlayer if x.isAlone == False))
+                character = next((x for x in listPlayer if x.suspect == True and x.color != color))
                 return data.index(character.color)
 
     # To get details for asked power
     # and decide how power will be used 
     def ask_for_color_power(self, arrayQuestionsType, color, data, game_state):
         if (color == Color.PURPLE.value):
-            return self.manage_purple_power(data)
+            return self.manage_purple_power(data, color)
         elif (color == Color.BLUE.value):
             if (arrayQuestionsType[3] == "room"):
                 pass
