@@ -1,7 +1,14 @@
+Console.exe
+ConsoleHook.dll
+FreeImage.dll
+FreeImagePlus.dll
+console.xml
+test.py
 .DS_Store
 *.swp
 *.swo
 backup/*
+test_results/
 logs/fantom.log
 logs/game.log
 logs/inspector.log
